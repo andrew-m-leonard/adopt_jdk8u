@@ -207,11 +207,14 @@ public abstract class LocPathIterator extends PredicatedNodeTest
   public XObject execute(XPathContext xctxt)
           throws javax.xml.transform.TransformerException
   {
-
-    XNodeSet iter = new XNodeSet((LocPathIterator)m_clones.getInstance());
-
+    LocPathIterator clone = (LocPathIterator)m_clones.getInstance();
+    // The XNodeSet takes ownership of this iterator for its full lifetime.
+    // Prevent detach() from returning it to the pool while the XNodeSet
+    // may still hold a live m_iter reference to it (threading fix for
+    // "Can not setRoot on a non-iterated NodeSequence" race condition).
+    clone.allowDetachToRelease(false);
+    XNodeSet iter = new XNodeSet(clone);
     iter.setRoot(xctxt.getCurrentNode(), xctxt);
-
     return iter;
   }
 
@@ -265,10 +268,13 @@ public abstract class LocPathIterator extends PredicatedNodeTest
           XPathContext xctxt, int contextNode)
             throws javax.xml.transform.TransformerException
   {
-    XNodeSet iter = new XNodeSet((LocPathIterator)m_clones.getInstance());
-
+    LocPathIterator clone = (LocPathIterator)m_clones.getInstance();
+    // Same ownership fix as execute(): XNodeSet owns this iterator for
+    // its full lifetime, so detach() must not return it to the pool
+    // (threading fix for "Can not setRoot on a non-iterated NodeSequence").
+    clone.allowDetachToRelease(false);
+    XNodeSet iter = new XNodeSet(clone);
     iter.setRoot(contextNode, xctxt);
-
     return iter;
   }
 
